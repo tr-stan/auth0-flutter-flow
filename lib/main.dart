@@ -4,9 +4,24 @@
 
 import 'package:flutter/material.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final FlutterAppAuth appAuth = FlutterAppAuth();
+final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+
 /// -----------------------------------
 ///           Auth0 Variables
 /// -----------------------------------
+
+String AUTH0_DOMAIN;
+String AUTH0_CLIENT_ID;
+
+const AUTH0_REDIRECT_URI = 'com.auth0.flutterdemo://login-callback';
+final AUTH0_ISSUER = 'https://$AUTH0_DOMAIN';
 
 /// -----------------------------------
 ///           Profile Widget
@@ -81,7 +96,13 @@ class Login extends StatelessWidget {
 ///                 App
 /// -----------------------------------
 
-void main() => runApp(MyApp());
+Future<void> main() async {
+  await DotEnv().load('.env');
+  AUTH0_DOMAIN = DotEnv().env['AUTH0_DOMAIN'];
+  AUTH0_CLIENT_ID = DotEnv().env['AUTH0_CLIENT_ID'];
+  print(AUTH0_DOMAIN);
+  runApp(MyApp());
+}
 
 class MyApp extends StatefulWidget {
   @override
