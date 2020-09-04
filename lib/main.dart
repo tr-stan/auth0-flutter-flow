@@ -134,4 +134,75 @@ class _MyAppState extends State<MyApp> {
       ),
     );
   }
+
+  // handle ID token received from OAuth sign in process
+  Map<String, dynamic> parseIdToken(String idToken) {
+    final parts = idToken.split(r'.');
+    assert(parts.length == 3);
+
+    return jsonDecode(
+      utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      ),
+    );
+  }
+
+  Future<Map> getUserDetails(String accessToken) async {
+    final url = 'https://$AUTH0_DOMAIN/userinfo';
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $accessToken'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get user details');
+    }
+  }
+
+  Future<void> loginAction() async {
+    setState(() {
+      isBusy = true;
+      errorMessage = '';
+    });
+
+    try {
+      final AuthorizationTokenResponse result =
+          await appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          AUTH0_CLIENT_ID,
+          AUTH0_REDIRECT_URI,
+          issuer: 'https://$AUTH0_DOMAIN',
+          scopes: ['openid', 'profile', 'offline_access'],
+        ),
+      );
+
+      final idToken = parseIdToken(result.idToken);
+      final profile = await getUserDetails(result.accessToken);
+
+      await secureStorage.write(
+          key: 'refresh_token', value: result.refreshToken);
+
+      setState(() {
+        isBusy = false;
+        isLoggedIn = true;
+        name = idToken['name'];
+        picture = profile['picture'];
+      });
+    } catch (e, s) {
+      print('login error: $e - stack: $s');
+
+      setState(() {
+        isBusy = false;
+        isLoggedIn = false;
+        errorMessage = e.toString();
+      });
+    }
+  }
+
+  void logoutAction() async {}
+
+  @override
+  void initState() {}
 }
