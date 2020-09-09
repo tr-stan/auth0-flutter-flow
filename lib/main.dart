@@ -129,7 +129,11 @@ class _MyAppState extends State<MyApp> {
           title: Text('Auth0 Demo'),
         ),
         body: Center(
-          child: Text('Implement User Authentication'),
+          child: isBusy
+              ? CircularProgressIndicator()
+              : isLoggedIn
+                  ? Profile(logoutAction, name, picture)
+                  : Login(loginAction, errorMessage),
         ),
       ),
     );
@@ -220,6 +224,8 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
+  // further optimize this code by keeping track of accessTokenExpirationDateTime
+  // and request a new accessToken only if the one at hand is expired.
   void initAction() async {
     final storedRefreshToken = await secureStorage.read(key: 'refresh_token');
     if (storedRefreshToken == null) return;
