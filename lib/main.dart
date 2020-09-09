@@ -201,7 +201,13 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void logoutAction() async {}
+  void logoutAction() async {
+    await secureStorage.delete(key: 'refresh_token');
+    setState(() {
+      isLoggedIn = false;
+      isBusy = false;
+    });
+  }
 
   @override
   void initState() {}
