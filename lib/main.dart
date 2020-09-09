@@ -170,12 +170,17 @@ class _MyAppState extends State<MyApp> {
     try {
       final AuthorizationTokenResponse result =
           await appAuth.authorizeAndExchangeCode(
-        AuthorizationTokenRequest(
-          AUTH0_CLIENT_ID,
-          AUTH0_REDIRECT_URI,
-          issuer: 'https://$AUTH0_DOMAIN',
-          scopes: ['openid', 'profile', 'offline_access'],
-        ),
+        AuthorizationTokenRequest(AUTH0_CLIENT_ID, AUTH0_REDIRECT_URI,
+            issuer: 'https://$AUTH0_DOMAIN',
+            scopes: [
+              'openid',
+              'profile',
+              'offline_access'
+            ],
+            promptValues: [
+              'login'
+            ] // ignore any existing session; force interactive login prompt
+            ),
       );
 
       final idToken = parseIdToken(result.idToken);
@@ -210,5 +215,43 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
-  void initState() {}
+  void initState() {
+    initAction();
+    super.initState();
+  }
+
+  void initAction() async {
+    final storedRefreshToken = await secureStorage.read(key: 'refresh_token');
+    if (storedRefreshToken == null) return;
+
+    setState(() {
+      isBusy = true;
+    });
+
+    try {
+      final response = await appAuth.token(
+        TokenRequest(
+          AUTH0_CLIENT_ID,
+          AUTH0_REDIRECT_URI,
+          issuer: AUTH0_ISSUER,
+          refreshToken: storedRefreshToken,
+        ),
+      );
+
+      final idToken = parseIdToken(response.idToken);
+      final profile = await getUserDetails(response.accessToken);
+
+      secureStorage.write(key: 'refresh_token', value: response.refreshToken);
+
+      setState(() {
+        isBusy = false;
+        isLoggedIn = true;
+        name = idToken['name'];
+        picture = profile['picture'];
+      });
+    } catch (e, s) {
+      print('error on refresh token: $e - stack: $s');
+      logoutAction();
+    }
+  }
 }
